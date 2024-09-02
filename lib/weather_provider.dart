@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:weather/models/forecast_weather.dart';
 import 'package:weather/utils/constants.dart';
 import 'package:geolocator/geolocator.dart';
@@ -9,57 +10,71 @@ import 'package:geolocator/geolocator.dart';
 import 'models/current_weather.dart';
 
 class WeatherProvider with ChangeNotifier {
+  final _statusKey = 'status';
 
-  double latitude = 0.0,  longtude = 0.0;
-  String units = metric;
+  double latitude = 0.0, longtude = 0.0;
+  String _units = metric;
   String unitsSymble = celsius;
   CurrentResponse? currentResponse;
   ForecastResponse? forecastResponse;
 
   bool get hasDataLoaded => currentResponse != null && forecastResponse != null;
+  void setUnit (bool status) {
+    _units = status ? imperial : metric;
+    unitsSymble = status ? fahrenheit : celsius;
+  }
 
-  Future<void> getWeatherData () async{
+  Future<void> getWeatherData() async {
     await _getCurrentWeather();
     await _getForecastWeather();
   }
 
-  Future<void>_getCurrentWeather() async{
-    final url = 'https://api.openweathermap.org/data/2.5/weather?lat=$latitude&lon=$longtude&appid=$weatherApiKey&units=$units';
-    try{
+  Future<void> _getCurrentWeather() async {
+    final url =
+        'https://api.openweathermap.org/data/2.5/weather?lat=$latitude&lon=$longtude&appid=$weatherApiKey&units=$_units';
+    try {
       Response response = await get(Uri.parse(url));
-      Map<String , dynamic> map = jsonDecode(response.body);
-      if(response.statusCode == 200){
+      Map<String, dynamic> map = jsonDecode(response.body);
+      if (response.statusCode == 200) {
         currentResponse = CurrentResponse.fromJson(map);
         notifyListeners();
-      }else{
+      } else {
         print(map['message']);
       }
-    }catch(error){
+    } catch (error) {
       print(error.toString());
     }
-
-
   }
 
-  Future<void>_getForecastWeather() async{
-    final url = 'https://api.openweathermap.org/data/2.5/forecast?lat=$latitude&lon=$longtude&appid=$weatherApiKey&units=$units';
-    try{
+  Future<void> _getForecastWeather() async {
+    final url =
+        'https://api.openweathermap.org/data/2.5/forecast?lat=$latitude&lon=$longtude&appid=$weatherApiKey&units=$_units';
+    try {
       Response response = await get(Uri.parse(url));
-      Map<String , dynamic> map = jsonDecode(response.body);
-      if(response.statusCode == 200){
+      Map<String, dynamic> map = jsonDecode(response.body);
+      if (response.statusCode == 200) {
         forecastResponse = ForecastResponse.fromJson(map);
         notifyListeners();
-      }else{
+      } else {
         print(map['message']);
       }
-    }catch(error){
+    } catch (error) {
       print(error.toString());
     }
-
-
   }
 
+  //using shared Prefarences and set/get methord
+  Future<bool> setTempStatus(bool status) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.setBool(_statusKey, status);
+  }
 
+  Future<bool> getTempStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_statusKey) ?? false;
+  }
+
+  //shared prefference end.
 
   /// Determine the current position of the device.
   ///
@@ -99,10 +114,8 @@ class WeatherProvider with ChangeNotifier {
 
     // When we reach here, permissions are granted and we can
     // continue accessing the position of the device.
-    final position =  await Geolocator.getCurrentPosition();
+    final position = await Geolocator.getCurrentPosition();
     latitude = position.latitude;
     longtude = position.longitude;
   }
-
-
 }

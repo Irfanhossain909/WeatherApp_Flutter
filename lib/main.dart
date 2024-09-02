@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:weather/pages/weather_home.dart';
 import 'package:weather/weather_provider.dart';
 
+import 'pages/setting_page.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();//if want to do anuthing before runApp
   SystemChrome.setPreferredOrientations([ //for Diseble rotation in app
@@ -47,7 +49,11 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const WeatherHome(),
+      initialRoute: WeatherHome.routeName,
+      routes: {
+        WeatherHome.routeName : (context) => WeatherHome(),
+        SettingPage.routeName : (context) => SettingPage(),
+      },
     );
   }
 }

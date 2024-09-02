@@ -5,6 +5,7 @@ import 'package:weather/customwidgets/app_background.dart';
 import 'package:weather/customwidgets/bubble.dart';
 import 'package:weather/models/current_weather.dart';
 import 'package:weather/models/forecast_weather.dart';
+import 'package:weather/pages/setting_page.dart';
 import 'package:weather/utils/constants.dart';
 import 'package:weather/utils/helper_functions.dart';
 import 'package:weather/weather_provider.dart';
@@ -12,16 +13,32 @@ import 'package:weather/weather_provider.dart';
 class WeatherHome extends StatelessWidget {
   const WeatherHome({super.key});
 
+  static const String routeName = '/';
+
+  Future<void> getData (BuildContext context) async{
+
+    context.read<WeatherProvider>().determinePosition();// detecting location
+    final status = await context.read<WeatherProvider>().getTempStatus();// checked status users setting activity from shared prefference.
+    context.read<WeatherProvider>().setUnit(status);//set the value and calcutale and return true or false
+    context.read<WeatherProvider>().getWeatherData();// and restart weather data agien.
+  }
+
   @override
   Widget build(BuildContext context) {
-    context.read<WeatherProvider>().determinePosition().then((value) {
-      context.read<WeatherProvider>().getWeatherData();
-    });
+
+    getData(context);
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: Text('Weather App'),
+        actions: [
+          IconButton( //for navigate 1 page to another page.
+            onPressed: () =>
+                Navigator.pushNamed(context, SettingPage.routeName),
+            icon: Icon(Icons.settings),
+          )
+        ],
       ),
       body: Consumer<WeatherProvider>(
         builder: (context, provider, child) => provider.hasDataLoaded
@@ -86,7 +103,10 @@ class CurrentWeatherWidget extends StatelessWidget {
               CachedNetworkImage(
                 imageUrl: getIconUrl(current.weather!.first.icon!),
                 placeholder: (context, url) => CircularProgressIndicator(),
-                errorWidget: (context, url, error) => const Icon(Icons.error, size: 40.0,),
+                errorWidget: (context, url, error) => const Icon(
+                  Icons.error,
+                  size: 40.0,
+                ),
               ),
               Text(
                 '${current.main!.temp!.round()}$degree$symble',
@@ -168,7 +188,8 @@ class ForecastWeatherView extends StatelessWidget {
                         imageUrl: getIconUrl(item.weather!.first.icon!),
                         width: 35.0,
                         height: 35.0,
-                        placeholder: (context, url) => const CircularProgressIndicator(),
+                        placeholder: (context, url) =>
+                            const CircularProgressIndicator(),
                       ),
                       Text(
                         '${item.main!.temp!}$degree$symble',
