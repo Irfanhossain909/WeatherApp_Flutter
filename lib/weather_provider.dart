@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:geocoding/geocoding.dart' as geo;
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:weather/models/forecast_weather.dart';
@@ -74,12 +76,21 @@ class WeatherProvider with ChangeNotifier {
     return prefs.getBool(_statusKey) ?? false;
   }
 
-  //shared prefference end.
 
-  /// Determine the current position of the device.
-  ///
-  /// When the location services are not enabled or permissions
-  /// are denied the `Future` will return an error.
+  Future<void> convertCityToLatLog (String city) async {
+    try {
+      final locationList = await geo.locationFromAddress(city);
+      if(locationList.isNotEmpty){
+        final location = locationList.first;
+        latitude = location.latitude;
+        longtude = location.longitude;
+      }
+
+    }catch(error) {
+      print(error);
+    }
+  }
+
   Future<void> determinePosition() async {
     bool serviceEnabled;
     LocationPermission permission;

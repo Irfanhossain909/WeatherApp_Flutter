@@ -15,17 +15,18 @@ class WeatherHome extends StatelessWidget {
 
   static const String routeName = '/';
 
-  Future<void> getData (BuildContext context) async{
-
-    context.read<WeatherProvider>().determinePosition();// detecting location
-    final status = await context.read<WeatherProvider>().getTempStatus();// checked status users setting activity from shared prefference.
-    context.read<WeatherProvider>().setUnit(status);//set the value and calcutale and return true or false
-    context.read<WeatherProvider>().getWeatherData();// and restart weather data agien.
+  Future<void> getData(BuildContext context) async {
+    context.read<WeatherProvider>().determinePosition(); // detecting location
+    final status = await context.read<WeatherProvider>()
+        .getTempStatus(); // checked status users setting activity from shared prefference.
+    context.read<WeatherProvider>().setUnit(
+        status); //set the value and calcutale and return true or false
+    context.read<WeatherProvider>()
+        .getWeatherData(); // and restart weather data agien.
   }
 
   @override
   Widget build(BuildContext context) {
-
     getData(context);
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -34,38 +35,57 @@ class WeatherHome extends StatelessWidget {
         title: Text('Weather App'),
         actions: [
           IconButton( //for navigate 1 page to another page.
+            onPressed: () {
+              getData(context);
+            },
+            icon: Icon(Icons.location_on),
+          ),
+          IconButton(//for search icon navigator
+            onPressed: (){
+              showSearch(context: context, delegate: _CitySearchDelegate())
+              .then((city) async {
+                if(city!= null && city.isNotEmpty){
+                  await context.read<WeatherProvider>().convertCityToLatLog(city);
+                  context.read<WeatherProvider>().getWeatherData();
+
+                }
+              });
+            },
+            icon: Icon(Icons.search),),
+          IconButton( //for navigate 1 page to another page.
             onPressed: () =>
                 Navigator.pushNamed(context, SettingPage.routeName),
             icon: Icon(Icons.settings),
-          )
+          ),
         ],
       ),
       body: Consumer<WeatherProvider>(
-        builder: (context, provider, child) => provider.hasDataLoaded
+        builder: (context, provider, child) =>
+        provider.hasDataLoaded
             ? Stack(
-                children: [
-                  const AppBackground(),
-                  Column(
-                    children: [
-                      CurrentWeatherWidget(
-                        current: provider.currentResponse!,
-                        symble: provider.unitsSymble,
-                      ),
-                      const Spacer(),
-                      ForecastWeatherView(
-                        items: provider.forecastResponse!.list!,
-                        symble: provider.unitsSymble,
-                      ),
-                      SizedBox(
-                        height: 40,
-                      )
-                    ],
-                  ),
-                ],
-              )
+          children: [
+            const AppBackground(),
+            Column(
+              children: [
+                CurrentWeatherWidget(
+                  current: provider.currentResponse!,
+                  symble: provider.unitsSymble,
+                ),
+                const Spacer(),
+                ForecastWeatherView(
+                  items: provider.forecastResponse!.list!,
+                  symble: provider.unitsSymble,
+                ),
+                SizedBox(
+                  height: 30,
+                )
+              ],
+            ),
+          ],
+        )
             : Center(
-                child: CircularProgressIndicator(),
-              ),
+          child: CircularProgressIndicator(),
+        ),
       ),
     );
   }
@@ -103,7 +123,8 @@ class CurrentWeatherWidget extends StatelessWidget {
               CachedNetworkImage(
                 imageUrl: getIconUrl(current.weather!.first.icon!),
                 placeholder: (context, url) => CircularProgressIndicator(),
-                errorWidget: (context, url, error) => const Icon(
+                errorWidget: (context, url, error) =>
+                const Icon(
                   Icons.error,
                   size: 40.0,
                 ),
@@ -125,7 +146,8 @@ class CurrentWeatherWidget extends StatelessWidget {
                 width: 10.0,
               ),
               Text(
-                '${current.weather!.first.main}-${current.weather!.first.description}',
+                '${current.weather!.first.main}-${current.weather!.first
+                    .description}',
                 style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
               ),
             ],
@@ -142,10 +164,12 @@ class CurrentWeatherWidget extends StatelessWidget {
                 Text('Visibility ${current.visibility}km'),
                 const Bubble(),
                 Text(
-                    'Sunrice ${getFormattedDateTime(current.sys!.sunrise!, pattern: 'hh:mm a')}'),
+                    'Sunrice ${getFormattedDateTime(
+                        current.sys!.sunrise!, pattern: 'hh:mm a')}'),
                 const Bubble(),
                 Text(
-                    'Sunrice ${getFormattedDateTime(current.sys!.sunset!, pattern: 'hh:mm a')}'),
+                    'Sunrice ${getFormattedDateTime(
+                        current.sys!.sunset!, pattern: 'hh:mm a')}'),
                 const Bubble(),
               ],
             ),
@@ -189,7 +213,7 @@ class ForecastWeatherView extends StatelessWidget {
                         width: 35.0,
                         height: 35.0,
                         placeholder: (context, url) =>
-                            const CircularProgressIndicator(),
+                        const CircularProgressIndicator(),
                       ),
                       Text(
                         '${item.main!.temp!}$degree$symble',
@@ -219,4 +243,56 @@ class ForecastWeatherView extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CitySearchDelegate extends SearchDelegate<String>{
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        onPressed: (){
+          query = '';
+        },
+        icon: Icon(Icons.clear),)
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      onPressed: (){
+        close(context, query);
+      },
+      icon: Icon(Icons.arrow_back),);
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return ListTile(
+      onTap: (){
+        close(context, query);
+      },
+      title: Text(query),
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    final filteredList = query.isEmpty ? majorCities :
+        majorCities.where((city) => city.toLowerCase().startsWith(query.toLowerCase())).toList();
+    return ListView.builder(
+      itemCount: filteredList.length,
+      itemBuilder: (context, index){
+        final city = filteredList[index];
+        return ListTile(
+          onTap: (){
+            close(context, city);
+          },
+          title: Text(city),
+        );
+      }
+
+    );
+  }
+
 }
