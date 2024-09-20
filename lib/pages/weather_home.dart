@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:weather/customwidgets/app_background.dart';
 import 'package:weather/customwidgets/bubble.dart';
@@ -25,18 +26,45 @@ class WeatherHome extends StatefulWidget {
 class _WeatherHomeState extends State<WeatherHome> {
   bool isConnected = true;
   late StreamSubscription<List<ConnectivityResult>> subscription;
+
   Future<void> getData() async {
     if(await isConnectedToInternet()){
-      await context.read<WeatherProvider>().determinePosition(); // detecting location
-      final status = await context
-          .read<WeatherProvider>()
-          .getTempStatus(); // checked status users setting activity from shared prefference.
-      context
-          .read<WeatherProvider>()
-          .setUnit(status); //set the value and calcutale and return true or false
-      context
-          .read<WeatherProvider>()
-          .getWeatherData(); // and restart weather data agien.
+      final positionStatus = await context.read<WeatherProvider>().determinePosition();
+      switch (positionStatus) {
+        case LocationDetectionStatus.locationServiceDisabled:
+          if(mounted) {
+            showCustomAlertDialog(
+              context: context,
+              title: 'Location Service disabled',
+              body: 'Your location service is currently disabled.',
+              positiveButtonText: 'Go to Location Settings',
+              onPositiveButtonClicked: () async {
+                Navigator.pop(context);
+                await Future.delayed(const Duration(seconds: 1));
+                await context.read<WeatherProvider>().openLocationServiceSettings();
+              },
+              onNegativeButtonClicked: () {
+                Navigator.pop(context);//close the dialog
+              },
+            );
+          }
+          break;
+        case LocationDetectionStatus.permissionDenied:
+          break;
+        case LocationDetectionStatus.permissionDeniedForever:
+          break;
+        default:
+          final status = await context
+              .read<WeatherProvider>()
+              .getTempStatus();
+          context
+              .read<WeatherProvider>()
+              .setUnit(status);
+          context
+              .read<WeatherProvider>()
+              .getWeatherData();
+          break;
+      }
     }else{
       setState(() {
         isConnected = false;
@@ -65,7 +93,11 @@ class _WeatherHomeState extends State<WeatherHome> {
         });
       }
     });
-    getData();
+    Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
+      if(status == ServiceStatus.enabled) {
+        getData();
+      }
+    });
     super.didChangeDependencies();
   }
 
@@ -108,7 +140,8 @@ class _WeatherHomeState extends State<WeatherHome> {
         ],
       ),
       body: Consumer<WeatherProvider>(
-        builder: (context, provider, child) => provider.hasDataLoaded
+        builder: (context, provider, child) =>
+          provider.hasDataLoaded
             ? Stack(
                 children: [
                   const AppBackground(),
@@ -138,12 +171,12 @@ class _WeatherHomeState extends State<WeatherHome> {
                       ),
                       CurrentWeatherWidget(
                         current: provider.currentResponse!,
-                        symble: provider.unitsSymble,
+                        symble: provider.unitSymbol,
                       ),
                       const Spacer(),
                       ForecastWeatherView(
                         items: provider.forecastResponse!.list!,
-                        symble: provider.unitsSymble,
+                        symble: provider.unitSymbol,
                       ),
                       const SizedBox(
                         height: 30,
