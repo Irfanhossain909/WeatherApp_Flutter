@@ -6,6 +6,9 @@ const fahrenheit = 'F';
 const degree = '\u00b0';
 const iconUrlPrefix = 'https://openweathermap.org/img/wn/';
 const iconUrlSuffix = '@2x.png';
+enum LocationDetectionStatus {
+  success, locationServiceDisabled, permissionDenied, permissionDeniedForever
+}
 final List<String> majorCities = [
   'New York City',
   'Los Angeles',
